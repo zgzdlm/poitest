@@ -19,6 +19,11 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
+/**
+ * 读取excel生成插入sql
+ * @author Aaron Tan
+ * 20170918
+ */
 public class ReadExcel {
 	
 	private static final String FILE_NAME = "D:/route.xls";
@@ -27,7 +32,7 @@ public class ReadExcel {
 	//100条生成一次sql
 	private static final Integer SPLIT_ROWS = 100;
 	//是否切割并生成sql文件
-	private static final boolean SPLIT_FILE = false;
+	private static final boolean SPLIT_FILE = true;
 	
 	public static void main(String[] args) throws IOException {
 		 Date dt = new Date();
@@ -36,8 +41,8 @@ public class ReadExcel {
 		 System.out.println("--当前时间:"+dateStr);
 		 //生成时 给属性赋值
 		 HashMap<String,String> propertyValueMap = new HashMap<>();
-		 propertyValueMap.put("RESERVED", "0");
-//		 propertyValueMap.put("ROW_ID", "+2000");
+		 propertyValueMap.put("RESERVED", "1");
+		 propertyValueMap.put("ROW_ID", "+2000");
 		 //字段为空时插入默认值
 		 propertyValueMap.put("REC_UPD_USR", "$init");
 		 propertyValueMap.put("ROW_CRT_TS", dateStr);
@@ -85,12 +90,12 @@ public class ReadExcel {
         	 if(i%SPLIT_ROWS==0) {
         		 //分割文件
         		 if(SPLIT_FILE) {
-        			 sb = new StringBuffer("\n--"+i+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
-	        		 String path = "./"+TABLE_NAME+i+"-"+(i+SPLIT_ROWS)+".sql";
+        			 sb = new StringBuffer("\n--"+(i+1)+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
+	        		 String path = "./"+TABLE_NAME+(i+1)+"-"+(i+SPLIT_ROWS)+".sql";
 	        		 sqlFile = new File(path);
 	        		 sqlFile.createNewFile();
         		 }else {
-        			 sb.append("\n--"+i+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
+        			 sb.append("\n--"+(i+1)+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
         		 }
             	 sb.append("insert into "+TABLE_NAME+" \n");
             	 sb.append(propertySql);
@@ -145,10 +150,17 @@ public class ReadExcel {
          }
          workbook.close();
 	}
-	
-		public static String setPropertyValue(HashMap<String,String> propertyValueMap
-									  		,Map<String, Integer> indexMap
-										  	,String value,Integer index) {
+	/**
+	 * 对应字段值进行调整
+	 * @param propertyValueMap
+	 * @param indexMap
+	 * @param value
+	 * @param index
+	 * @return
+	 */
+	public static String setPropertyValue(HashMap<String,String> propertyValueMap
+								  		,Map<String, Integer> indexMap
+									  	,String value,Integer index) {
 	    Iterator<String> proIterator = propertyValueMap.keySet().iterator();
 		  //根据pkv赋值
 	   	 while(proIterator.hasNext()) {
