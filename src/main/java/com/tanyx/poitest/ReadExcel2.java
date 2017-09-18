@@ -1,8 +1,12 @@
 package com.tanyx.poitest;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -23,6 +27,8 @@ public class ReadExcel2 {
 	private static final String TABLE_NAME = "T_CPS_ROUTE";
 	//100条生成一次sql
 	private static final Integer SPLIT_ROWS = 100;
+	//是否切割并生成sql文件
+	private static final boolean SPLIT_FILE = true;
 	
 	public static void main(String[] args) throws IOException {
 		 Date dt = new Date();
@@ -53,7 +59,7 @@ public class ReadExcel2 {
 		 Workbook workbook = new HSSFWorkbook(excelFile);
          Sheet datatypeSheet = workbook.getSheetAt(0);
          Iterator<Row> iterator = datatypeSheet.iterator();
-         StringBuffer sb = new StringBuffer("insert into "+TABLE_NAME+" \n");
+         StringBuffer sb = new StringBuffer("");
          //获取SQl property 只获取excel第一行数据
          StringBuffer propertySql = new StringBuffer("(");
          if(iterator.hasNext()) {
@@ -73,12 +79,20 @@ public class ReadExcel2 {
             	 pIndex++;
         	 }
          }
-         sb.append(propertySql);
+         File sqlFile = null;
          //获取数据
          Integer i = 0;
          while (iterator.hasNext()) {
-        	 if(i!=0&&i%SPLIT_ROWS==0) {
-        		 sb.append("\n--第"+i+"条数据分割: \n");
+        	 if(i%SPLIT_ROWS==0) {
+        		 //分割文件
+        		 if(SPLIT_FILE) {
+        			 sb = new StringBuffer("\n--"+i+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
+	        		 String path = "./"+TABLE_NAME+i+"-"+(i+SPLIT_ROWS)+".sql";
+	        		 sqlFile = new File(path);
+	        		 sqlFile.createNewFile();
+        		 }else {
+        			 sb.append("\n--"+i+"到"+(i+SPLIT_ROWS)+"条数据分割: \n");
+        		 }
             	 sb.append("insert into "+TABLE_NAME+" \n");
             	 sb.append(propertySql);
              }
@@ -91,23 +105,8 @@ public class ReadExcel2 {
             	 Cell currentCell = cellIterator.next();
             	 String value = currentCell.getStringCellValue().trim();
             	 //根据pkv赋值
-            	 while(proIterator.hasNext()) {
-            		 String k = proIterator.next();
-            		 if(indexMap.containsKey(k)) {
-            			 if(j.equals(indexMap.get(k))) {
-            				 String pv = propertyValueMap.get(k);
-            				 if(pv.indexOf("+")>-1) {
-            					 value = String.valueOf(Integer.valueOf(value)+Integer.valueOf(pv.substring(pv.indexOf("+")+1)));
-            				 }else if(pv.indexOf("$")>-1) {
-            					 if(value==null||"".equals(value)) {
-            						 value = pv.substring(pv.indexOf("$")+1);
-            					 }
-            				 }else {
-            					 value = propertyValueMap.get(k);
-            				 }
-            			 }
-                	 }
-            	 }
+            	 value = ReadExcel2.setPropertyValue(propertyValueMap, indexMap, value, j);
+            	 //开头括号
         		 if(j==0) {
         			 sbValues.append("(");
         		 }
@@ -117,6 +116,7 @@ public class ReadExcel2 {
         			 }else {
         				 sbValues.append("'"+value+"',");
         			 }
+        		 //结尾
             	 }else {
             		 if(propertyTypeMap.containsKey(j)) {
             			 sbValues.append(value+")");
@@ -129,11 +129,43 @@ public class ReadExcel2 {
              i++;
              if(iterator.hasNext() && i%SPLIT_ROWS !=0) {
     			 sbValues.append(",");
+        	 }else {
+        		 if(SPLIT_FILE && sqlFile!=null) {
+        			 try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+        		              new FileOutputStream(sqlFile), "utf-8"))) {
+        				 writer.write(sb.append(sbValues.toString()+"\n").toString());
+        			 }
+        		 }
         	 }
              sb.append(sbValues.toString()+"\n");
          }
          System.out.println(sb.toString());
          workbook.close();
+	}
+	
+		public static String setPropertyValue(HashMap<String,String> propertyValueMap
+									  		,Map<String, Integer> indexMap
+										  	,String value,Integer index) {
+	    Iterator<String> proIterator = propertyValueMap.keySet().iterator();
+		  //根据pkv赋值
+	   	 while(proIterator.hasNext()) {
+	   		 String k = proIterator.next();
+	   		 if(indexMap.containsKey(k)) {
+	   			 if(index.equals(indexMap.get(k))) {
+	   				 String pv = propertyValueMap.get(k);
+	   				 if(pv.indexOf("+")>-1) {
+	   					 value = String.valueOf(Integer.valueOf(value)+Integer.valueOf(pv.substring(pv.indexOf("+")+1)));
+	   				 }else if(pv.indexOf("$")>-1) {
+	   					 if(value==null||"".equals(value)) {
+	   						 value = pv.substring(pv.indexOf("$")+1);
+	   					 }
+	   				 }else {
+	   					 value = propertyValueMap.get(k);
+	   				 }
+	   			 }
+	       	 }
+	   	 }
+		return value;
 	}
 	
 }
