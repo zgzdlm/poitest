@@ -42,9 +42,11 @@ public class ReadExcel {
 		 //生成时 给属性赋值
 		 HashMap<String,String> propertyValueMap = new HashMap<>();
 		 propertyValueMap.put("RESERVED", "1");
+		 //默认interge类型字段ID 相加 +
 		 propertyValueMap.put("ROW_ID", "+2000");
-		 //字段为空时插入默认值
+		 //字段为空时插入默认值 $
 		 propertyValueMap.put("REC_UPD_USR", "$init");
+		 //强制插
 		 propertyValueMap.put("ROW_CRT_TS", dateStr);
 		 propertyValueMap.put("REC_UPD_TS", dateStr);
 		 propertyValueMap.put("REC_CMT_TS", dateStr);
@@ -105,7 +107,6 @@ public class ReadExcel {
              Iterator<Cell> cellIterator = currentRow.iterator();
              Integer j = 0;
              while (cellIterator.hasNext()) {
-            	 Iterator<String> proIterator = propertyValueMap.keySet().iterator();
             	 Cell currentCell = cellIterator.next();
             	 String value = currentCell.getStringCellValue().trim();
             	 //根据pkv赋值
